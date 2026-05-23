@@ -752,15 +752,17 @@
 
     async function createDeck() {
       const status = $("deckStatus");
-      const name = $("deckName").value.trim();
+      let name = $("deckName").value.trim();
       const commanderName = $("commanderName").value.trim();
-
-      if (!name) return setStatus(status, "Falta el nombre del mazo.", true);
+      
       if (!commanderName) return setStatus(status, "Falta el comandante.", true);
 
       try {
         setStatus(status, "Buscando comandante...");
         const card = await fetchCardByName(commanderName);
+
+        if (!name) name = card.name;
+        
         const imageUrl = getImageUrl(card);
         if (!imageUrl) throw new Error("La carta no tiene imagen disponible.");
 
