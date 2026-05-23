@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>MTG Deck Image App</title>
+
+  <link rel="manifest" href="./manifest.webmanifest">
+  <meta name="theme-color" content="#000000">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="MTG Decks">
+  <link rel="apple-touch-icon" href="./icon-192.png">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MTG Deck Image App</title>
+  <style>
+    :root {
+      --bg: #f7f7f7;
+      --text: #111;
+      --muted: #666;
+      --card: #fff;
+      --border: #111;
+      --danger: #b00020;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .app {
+      max-width: 520px;
+      min-height: 100vh;
+      margin: 0 auto;
+      padding: 18px 14px 40px;
+      background: #fff;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-height: 54px;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 500;
+      margin: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .round-btn {
+      width: 54px;
+      height: 54px;
+      border-radius: 999px;
+      background: #000;
+      color: #fff;
+      font-size: 28px;
+      line-height: 1;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+    }
+
+    .back-btn {
+      display: none;
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: #eee;
+      font-size: 24px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px 22px;
+      align-items: start;
+    }
+
+    .tile {
+      position: relative;
+      cursor: pointer;
+      min-width: 0;
+    }
+
+    .cover {
+      width: 100%;
+      aspect-ratio: 0.716;
+      object-fit: cover;
+      object-position: top;
+      background: #000;
+      display: block;
+      border-radius: 0;
+    }
+
+    .label {
+      position: relative;
+      display: block;
+      margin-top: -30px;
+      margin-left: 6px;
+      margin-right: 6px;
+      padding: 2px 4px;
+      background: #fff;
+      color: #000;
+      border: 4px solid #111;
+      font-size: 22px;
+      line-height: 1.05;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .card-img {
+      width: 100%;
+      border-radius: 8px;
+      background: #000;
+      display: block;
+      box-shadow: 0 2px 8px rgba(0,0,0,.25);
+    }
+
+    .empty {
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.35;
+      padding: 18px 4px;
+    }
+
+    .delete-btn {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      background: rgba(0,0,0,.72);
+      color: #fff;
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      font-size: 18px;
+      display: grid;
+      place-items: center;
+      z-index: 3;
+    }
+
+    dialog {
+      width: min(92vw, 440px);
+      border: 0;
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.35);
+    }
+
+    dialog::backdrop { background: rgba(0,0,0,.45); }
+
+    .dialog-title {
+      font-size: 22px;
+      margin: 0 0 14px;
+    }
+
+    label {
+      display: block;
+      font-weight: 700;
+      margin: 12px 0 6px;
+    }
+
+    input {
+      width: 100%;
+      padding: 11px;
+      border: 2px solid #ccc;
+      border-radius: 10px;
+      font-size: 16px;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #111;
+    }
+
+    .actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .btn {
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 16px;
+      background: #eee;
+      color: #111;
+    }
+
+    .btn.primary {
+      background: #000;
+      color: #fff;
+    }
+
+    .btn.danger {
+      background: var(--danger);
+      color: #fff;
+    }
+
+    .suggestions {
+      display: none;
+      margin-top: 6px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      max-height: 190px;
+      overflow: auto;
+      background: #fff;
+    }
+
+    .suggestion {
+      padding: 9px 10px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+      font-size: 15px;
+    }
+
+    .suggestion:last-child { border-bottom: 0; }
+    .suggestion:hover { background: #f1f1f1; }
+
+    .hint {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 5px;
+      line-height: 1.35;
+    }
+
+    .preview {
+      display: none;
+      margin-top: 10px;
+      padding: 10px;
+      background: #f2f2f2;
+      border-radius: 12px;
+      font-size: 14px;
+    }
+
+    .status {
+      margin-top: 10px;
+      color: var(--muted);
+      min-height: 18px;
+      font-size: 14px;
+    }
+
+    .error { color: var(--danger); }
+
+    @media (max-width: 380px) {
+      .grid { gap: 14px; }
+      .label { font-size: 18px; border-width: 3px; }
+      .round-btn { width: 52px; height: 52px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <button id="backBtn" class="back-btn" title="Volver">←</button>
+      <button id="addBtn" class="round-btn" title="Agregar">+</button>
+      <h1 id="screenTitle">Mazos</h1>
+    </header>
+
+    <main id="content"></main>
+  </div>
+
+  <dialog id="deckDialog">
+    <form method="dialog" id="deckForm">
+      <h2 class="dialog-title">Nuevo mazo</h2>
+
+      <label for="deckName">Nombre del mazo</label>
+      <input id="deckName" autocomplete="off" placeholder="Ej: Mazo 1" />
+
+      <label for="commanderName">Comandante</label>
+      <input id="commanderName" autocomplete="off" placeholder="Ej: Atraxa" />
+      <div id="commanderSuggestions" class="suggestions"></div>
+      <div class="hint">Primero buscá online. Al confirmar, la imagen queda guardada en este dispositivo.</div>
+
+      <div id="deckStatus" class="status"></div>
+
+      <div class="actions">
+        <button type="button" class="btn" onclick="closeDeckDialog()">Cancelar</button>
+        <button type="submit" class="btn primary">Confirmar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="cardDialog">
+    <form method="dialog" id="cardForm">
+      <h2 class="dialog-title">Agregar carta</h2>
+
+      <label for="cardName">Nombre de la carta</label>
+      <input id="cardName" autocomplete="off" placeholder="Ej: Sol Ring" />
+      <div id="cardSuggestions" class="suggestions"></div>
+
+      <label for="cardCode">Código de identificación</label>
+      <input id="cardCode" autocomplete="off" placeholder="Ej: war 014" />
+      <div id="codePreview" class="preview"></div>
+      <div class="hint">Podés usar nombre o código. Si completás código, tiene prioridad.</div>
+
+      <div id="cardStatus" class="status"></div>
+
+      <div class="actions">
+        <button type="button" class="btn" onclick="closeCardDialog()">Cancelar</button>
+        <button type="submit" class="btn primary">Confirmar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script>
+    const SCRYFALL = "https://api.scryfall.com";
+
+    const state = {
+      db: null,
+      decks: [],
+      cards: [],
+      currentDeck: null,
+      selectedCommanderName: "",
+      selectedCardName: "",
+      selectedCodeCard: null,
+      objectUrls: []
+    };
+
+    const $ = (id) => document.getElementById(id);
+
+    document.addEventListener("DOMContentLoaded", init);
+
+    async function init() {
+      state.db = await openDB();
+      await loadDecks();
+      bindEvents();
+      renderHome();
+    }
+
+    function bindEvents() {
+      $("addBtn").addEventListener("click", () => {
+        if (state.currentDeck) openCardDialog();
+        else openDeckDialog();
+      });
+
+      $("backBtn").addEventListener("click", renderHome);
+
+      $("deckForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        await createDeck();
+      });
+
+      $("cardForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        await addCardToDeck();
+      });
+
+      $("commanderName").addEventListener("input", debounce(async (e) => {
+        state.selectedCommanderName = e.target.value.trim();
+        await showAutocomplete(e.target.value, $("commanderSuggestions"), (name) => {
+          $("commanderName").value = name;
+          state.selectedCommanderName = name;
+          hideSuggestions($("commanderSuggestions"));
+        });
+      }, 300));
+
+      $("cardName").addEventListener("input", debounce(async (e) => {
+        state.selectedCardName = e.target.value.trim();
+        await showAutocomplete(e.target.value, $("cardSuggestions"), (name) => {
+          $("cardName").value = name;
+          state.selectedCardName = name;
+          hideSuggestions($("cardSuggestions"));
+        });
+      }, 300));
+
+      $("cardCode").addEventListener("input", debounce(async (e) => {
+        await previewCodeSearch(e.target.value);
+      }, 450));
+    }
+
+    // ---------- Render ----------
+
+    function clearObjectUrls() {
+      for (const url of state.objectUrls) URL.revokeObjectURL(url);
+      state.objectUrls = [];
+    }
+
+    function blobUrl(blob) {
+      const url = URL.createObjectURL(blob);
+      state.objectUrls.push(url);
+      return url;
+    }
+
+    function renderHome() {
+      clearObjectUrls();
+      state.currentDeck = null;
+      $("screenTitle").textContent = "Mazos";
+      $("backBtn").style.display = "none";
+      $("addBtn").style.display = "grid";
+
+      const content = $("content");
+      if (!state.decks.length) {
+        content.innerHTML = `<div class="empty">Tocá + para crear tu primer mazo. Sí, todavía está más vacío que cementerio de tokens.</div>`;
+        return;
+      }
+
+      content.innerHTML = `<div class="grid"></div>`;
+      const grid = content.querySelector(".grid");
+
+      for (const deck of state.decks) {
+        const tile = document.createElement("div");
+        tile.className = "tile";
+        tile.innerHTML = `
+          <button class="delete-btn" title="Borrar">×</button>
+          <img class="cover" src="${blobUrl(deck.commanderImageBlob)}" alt="${escapeHtml(deck.commanderName)}">
+          <span class="label">${escapeHtml(deck.name)}</span>
+        `;
+
+        tile.addEventListener("click", () => openDeck(deck.id));
+        tile.querySelector(".delete-btn").addEventListener("click", async (e) => {
+          e.stopPropagation();
+          await deleteDeck(deck.id);
+        });
+
+        grid.appendChild(tile);
+      }
+    }
+
+    async function openDeck(deckId) {
+      clearObjectUrls();
+      const deck = state.decks.find(d => d.id === deckId);
+      if (!deck) return;
+
+      state.currentDeck = deck;
+      state.cards = await getCardsByDeck(deck.id);
+
+      $("screenTitle").textContent = deck.name;
+      $("backBtn").style.display = "inline-grid";
+      $("addBtn").style.display = "grid";
+
+      const content = $("content");
+      if (!state.cards.length) {
+        content.innerHTML = `<div class="empty">Tocá + para guardar cartas dentro de este mazo.</div>`;
+        return;
+      }
+
+      content.innerHTML = `<div class="grid"></div>`;
+      const grid = content.querySelector(".grid");
+
+      for (const card of state.cards) {
+        const tile = document.createElement("div");
+        tile.className = "tile";
+        tile.innerHTML = `
+          <button class="delete-btn" title="Borrar">×</button>
+          <img class="card-img" src="${blobUrl(card.imageBlob)}" alt="${escapeHtml(card.name)}" title="${escapeHtml(card.name)}">
+        `;
+
+        tile.querySelector(".delete-btn").addEventListener("click", async (e) => {
+          e.stopPropagation();
+          await deleteCard(card.id);
+        });
+
+        grid.appendChild(tile);
+      }
+    }
+
+    // ---------- Dialogs ----------
+
+    function openDeckDialog() {
+      $("deckName").value = "";
+      $("commanderName").value = "";
+      $("deckStatus").textContent = "";
+      state.selectedCommanderName = "";
+      hideSuggestions($("commanderSuggestions"));
+      $("deckDialog").showModal();
+      setTimeout(() => $("deckName").focus(), 60);
+    }
+
+    function closeDeckDialog() {
+      $("deckDialog").close();
+    }
+
+    function openCardDialog() {
+      $("cardName").value = "";
+      $("cardCode").value = "";
+      $("cardStatus").textContent = "";
+      $("codePreview").style.display = "none";
+      state.selectedCardName = "";
+      state.selectedCodeCard = null;
+      hideSuggestions($("cardSuggestions"));
+      $("cardDialog").showModal();
+      setTimeout(() => $("cardName").focus(), 60);
+    }
+
+    function closeCardDialog() {
+      $("cardDialog").close();
+    }
+
+    // ---------- Core actions ----------
+
+    async function createDeck() {
+      const status = $("deckStatus");
+      const name = $("deckName").value.trim();
+      const commanderName = $("commanderName").value.trim();
+
+      if (!name) return setStatus(status, "Falta el nombre del mazo.", true);
+      if (!commanderName) return setStatus(status, "Falta el comandante.", true);
+
+      try {
+        setStatus(status, "Buscando comandante...");
+        const card = await fetchCardByName(commanderName);
+        const imageUrl = getImageUrl(card);
+        if (!imageUrl) throw new Error("La carta no tiene imagen disponible.");
+
+        setStatus(status, "Guardando imagen offline...");
+        const imageBlob = await downloadImageBlob(imageUrl);
+
+        const deck = {
+          id: crypto.randomUUID(),
+          name,
+          commanderName: card.name,
+          commanderScryfallId: card.id,
+          commanderImageBlob: imageBlob,
+          createdAt: Date.now()
+        };
+
+        await putRecord("decks", deck);
+        await loadDecks();
+        closeDeckDialog();
+        renderHome();
+      } catch (err) {
+        setStatus(status, err.message || "No pude crear el mazo.", true);
+      }
+    }
+
+    async function addCardToDeck() {
+      const status = $("cardStatus");
+      const name = $("cardName").value.trim();
+      const code = $("cardCode").value.trim();
+
+      if (!state.currentDeck) return setStatus(status, "Primero abrí un mazo.", true);
+      if (!name && !code) return setStatus(status, "Escribí nombre o código.", true);
+
+      try {
+        setStatus(status, "Buscando carta...");
+        let card;
+
+        if (code) {
+          card = state.selectedCodeCard || await fetchCardByCode(code);
+        } else {
+          card = await fetchCardByName(name);
+        }
+
+        const imageUrl = getImageUrl(card);
+        if (!imageUrl) throw new Error("La carta no tiene imagen disponible.");
+
+        setStatus(status, "Guardando imagen offline...");
+        const imageBlob = await downloadImageBlob(imageUrl);
+
+        const record = {
+          id: crypto.randomUUID(),
+          deckId: state.currentDeck.id,
+          name: card.name,
+          code: `${card.set} ${card.collector_number}`,
+          set: card.set,
+          collector_number: card.collector_number,
+          scryfallId: card.id,
+          imageBlob,
+          createdAt: Date.now()
+        };
+
+        await putRecord("cards", record);
+        closeCardDialog();
+        await openDeck(state.currentDeck.id);
+      } catch (err) {
+        setStatus(status, err.message || "No pude agregar la carta.", true);
+      }
+    }
+
+    async function deleteDeck(deckId) {
+      if (!confirm("¿Borrar este mazo y sus cartas?")) return;
+      const cards = await getCardsByDeck(deckId);
+      for (const card of cards) await deleteRecord("cards", card.id);
+      await deleteRecord("decks", deckId);
+      await loadDecks();
+      renderHome();
+    }
+
+    async function deleteCard(cardId) {
+      if (!confirm("¿Borrar esta carta del mazo?")) return;
+      await deleteRecord("cards", cardId);
+      await openDeck(state.currentDeck.id);
+    }
+
+    // ---------- Scryfall ----------
+
+    async function fetchJson(url) {
+      const res = await fetch(url);
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        const msg = data?.details || data?.error || "Error consultando Scryfall.";
+        throw new Error(msg);
+      }
+      return data;
+    }
+
+    async function fetchCardByName(name) {
+      return fetchJson(`${SCRYFALL}/cards/named?fuzzy=${encodeURIComponent(name)}`);
+    }
+
+    function parseCardCode(raw) {
+      const value = raw.trim().toLowerCase();
+      const match = value.match(/^([a-z0-9]{3,6})\s*[-# ]\s*([a-z0-9★]+)$/i);
+      if (!match) return null;
+      return { setCode: match[1], number: match[2] };
+    }
+
+    async function fetchCardByCode(raw) {
+      const parsed = parseCardCode(raw);
+      if (!parsed) throw new Error("Formato de código inválido. Usá algo como: war 014");
+      return fetchJson(`${SCRYFALL}/cards/${encodeURIComponent(parsed.setCode)}/${encodeURIComponent(parsed.number)}`);
+    }
+
+    async function showAutocomplete(value, container, onPick) {
+      const query = value.trim();
+      if (query.length < 2) return hideSuggestions(container);
+
+      try {
+        const data = await fetchJson(`${SCRYFALL}/cards/autocomplete?q=${encodeURIComponent(query)}`);
+        const names = (data.data || []).slice(0, 10);
+
+        if (!names.length) return hideSuggestions(container);
+
+        container.innerHTML = "";
+        for (const name of names) {
+          const row = document.createElement("div");
+          row.className = "suggestion";
+          row.textContent = name;
+          row.addEventListener("click", () => onPick(name));
+          container.appendChild(row);
+        }
+        container.style.display = "block";
+      } catch {
+        hideSuggestions(container);
+      }
+    }
+
+    async function previewCodeSearch(value) {
+      const box = $("codePreview");
+      state.selectedCodeCard = null;
+      box.style.display = "none";
+      box.textContent = "";
+
+      if (!value.trim()) return;
+      if (!parseCardCode(value)) return;
+
+      try {
+        const card = await fetchCardByCode(value);
+        state.selectedCodeCard = card;
+        box.innerHTML = `<strong>${escapeHtml(card.name)}</strong><br>${escapeHtml(card.set.toUpperCase())} ${escapeHtml(card.collector_number)}`;
+        box.style.display = "block";
+      } catch {
+        box.innerHTML = `<span class="error">No encontré ese código.</span>`;
+        box.style.display = "block";
+      }
+    }
+
+    function getImageUrl(card) {
+      if (card.image_uris?.normal) return card.image_uris.normal;
+      if (card.card_faces?.[0]?.image_uris?.normal) return card.card_faces[0].image_uris.normal;
+      return null;
+    }
+
+    async function downloadImageBlob(url) {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("No pude descargar la imagen.");
+      return res.blob();
+    }
+
+    // ---------- IndexedDB ----------
+
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open("mtg-deck-image-app", 1);
+
+        request.onupgradeneeded = (event) => {
+          const db = event.target.result;
+
+          if (!db.objectStoreNames.contains("decks")) {
+            db.createObjectStore("decks", { keyPath: "id" });
+          }
+
+          if (!db.objectStoreNames.contains("cards")) {
+            const cards = db.createObjectStore("cards", { keyPath: "id" });
+            cards.createIndex("deckId", "deckId", { unique: false });
+          }
+        };
+
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    function store(name, mode = "readonly") {
+      return state.db.transaction(name, mode).objectStore(name);
+    }
+
+    function reqToPromise(req) {
+      return new Promise((resolve, reject) => {
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function putRecord(storeName, record) {
+      return reqToPromise(store(storeName, "readwrite").put(record));
+    }
+
+    async function deleteRecord(storeName, id) {
+      return reqToPromise(store(storeName, "readwrite").delete(id));
+    }
+
+    async function getAllRecords(storeName) {
+      return reqToPromise(store(storeName).getAll());
+    }
+
+    async function getCardsByDeck(deckId) {
+      const index = store("cards").index("deckId");
+      const cards = await reqToPromise(index.getAll(deckId));
+      return cards.sort((a, b) => a.createdAt - b.createdAt);
+    }
+
+    async function loadDecks() {
+      state.decks = (await getAllRecords("decks")).sort((a, b) => a.createdAt - b.createdAt);
+    }
+
+    // ---------- Helpers ----------
+
+    function debounce(fn, wait) {
+      let timeout;
+      return (...args) => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => fn(...args), wait);
+      };
+    }
+
+    function hideSuggestions(container) {
+      container.innerHTML = "";
+      container.style.display = "none";
+    }
+
+    function setStatus(element, text, isError = false) {
+      element.textContent = text;
+      element.className = isError ? "status error" : "status";
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>'"]/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "'": "&#39;",
+        "\"": "&quot;"
+      }[char]));
+    }
+  </script>
+
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./service-worker.js");
+    });
+  }
+
+  if (navigator.storage && navigator.storage.persist) {
+    navigator.storage.persist();
+  }
+</script> 
+</body>
+</html>
