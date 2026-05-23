@@ -56,7 +56,7 @@
       padding: 0 0 56px;
       background: var(--surface);
       position: relative;
-      overflow: hidden;
+      overflow: visible;
     }
 
     /* top glow band */
@@ -76,10 +76,10 @@
       gap: 12px;
       padding: 18px 16px 14px;
       border-bottom: 1px solid var(--border);
-      background: linear-gradient(180deg, rgba(201,168,76,.07) 0%, transparent 100%);
+      background: linear-gradient(180deg, rgba(201,168,76,.07) 0%, var(--surface) 100%);
       position: sticky;
       top: 0;
-      z-index: 5;
+      z-index: 999;
       backdrop-filter: blur(8px);
     }
 
