@@ -916,17 +916,119 @@
     }
 
     function parseCardCode(raw) {
-      const value = raw.trim().toLowerCase();
-      const match = value.match(/^([a-z0-9]{3,6})\s*[-# ]\s*([a-z0-9★]+)$/i);
-      if (!match) return null;
-      return { setCode: match[1], number: match[2] };
-    }
+  let value = String(raw || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFKC")
+    .replace(/[–—−]/g, "-")
+    .replace(/[·•]/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/^#\s*/, "");
 
-    async function fetchCardByCode(raw) {
-      const parsed = parseCardCode(raw);
-      if (!parsed) throw new Error("Formato inválido. Usá algo como: war 014");
-      return fetchJson(`${SCRYFALL}/cards/${encodeURIComponent(parsed.setCode)}/${encodeURIComponent(parsed.number)}`);
+  if (!value) return null;
+
+  // Ej: "014/264 war" o "war 014/264" => se queda con "014"
+  value = value.replace(/([a-z]?-?\d+[a-z0-9★*]*)\s*\/\s*\d+[a-z0-9]*/gi, "$1");
+
+  // Limpieza general
+  value = value.replace(/[^a-z0-9★*#/\-\s]/g, " ").replace(/\s+/g, " ").trim();
+
+  const collectorPattern = "([a-z]?-?\\d+[a-z0-9★*]*)";
+
+  // war 014 / war-014 / war #014
+  let match = value.match(new RegExp(`^([a-z0-9]{2,6})\\s*[-# ]+\\s*${collectorPattern}$`, "i"));
+  if (match) {
+    return normalizeParsedCode(match[1], match[2]);
+  }
+
+  // 014 war / #014 war
+  match = value.match(new RegExp(`^#?\\s*${collectorPattern}\\s*[-# ]+\\s*([a-z0-9]{2,6})$`, "i"));
+  if (match) {
+    return normalizeParsedCode(match[2], match[1]);
+  }
+
+  // war014 — solo para set codes sin números
+  match = value.match(/^([a-z]{2,5})(\d+[a-z0-9★*]*)$/i);
+  if (match) {
+    return normalizeParsedCode(match[1], match[2]);
+  }
+
+  return null;
+}
+
+function normalizeParsedCode(setCode, number) {
+  return {
+    setCode: String(setCode || "").toLowerCase().trim(),
+    number: normalizeCollectorNumber(number)
+  };
+}
+
+function normalizeCollectorNumber(number) {
+  return String(number || "")
+    .toLowerCase()
+    .trim()
+    .replace(/^#/, "")
+    .replace(/\*/g, "★");
+}
+
+function getCollectorNumberCandidates(number) {
+  const n = normalizeCollectorNumber(number);
+  const candidates = new Set();
+
+  candidates.add(n);
+
+  // 014 -> 14
+  candidates.add(n.replace(/^0+(\d)/, "$1"));
+
+  // a-014 -> a-14
+  candidates.add(n.replace(/^([a-z]-?)0+(\d)/, "$1$2"));
+
+  // 001a -> 1a
+  candidates.add(n.replace(/^0+(\d+[a-z])$/, "$1"));
+
+  return [...candidates].filter(Boolean);
+}
+
+async function fetchCardByCode(raw) {
+  const parsed = parseCardCode(raw);
+
+  if (!parsed) {
+    throw new Error("Formato inválido. Probá: war 014, 014 war, war014 o war 014/264");
+  }
+
+  const numbers = getCollectorNumberCandidates(parsed.number);
+
+  // 1) Primero intenta endpoint directo /cards/:set/:collector_number
+  for (const number of numbers) {
+    try {
+      return await fetchJson(
+        `${SCRYFALL}/cards/${encodeURIComponent(parsed.setCode)}/${encodeURIComponent(number)}`
+      );
+    } catch (err) {
+      // Sigue probando variantes
     }
+  }
+
+  // 2) Fallback: búsqueda Scryfall por set + collector number
+  for (const number of numbers) {
+    try {
+      const query = `set:${parsed.setCode} cn:${number}`;
+      const data = await fetchJson(
+        `${SCRYFALL}/cards/search?q=${encodeURIComponent(query)}&unique=prints`
+      );
+
+      if (data.data && data.data.length) {
+        return data.data[0];
+      }
+    } catch (err) {
+      // Sigue probando variantes
+    }
+  }
+
+  throw new Error(
+    `No encontré el código ${parsed.setCode.toUpperCase()} ${parsed.number}. Probá con el set y número impresos, por ejemplo: war 14`
+  );
+}
 
     async function showAutocomplete(value, container, onPick) {
       const query = value.trim().toLowerCase();
