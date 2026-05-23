@@ -1058,10 +1058,16 @@
     async function getAllRecords(storeName) { return reqToPromise(store(storeName).getAll()); }
 
     async function getCardsByDeck(deckId) {
-      const index = store("cards").index("deckId");
-      const cards = await reqToPromise(index.getAll(deckId));
-      return cards.sort((a, b) => a.createdAt - b.createdAt);
-    }
+  const index = store("cards").index("deckId");
+  const cards = await reqToPromise(index.getAll(deckId));
+
+  return cards.sort((a, b) =>
+    a.name.localeCompare(b.name, "en", {
+      sensitivity: "base",
+      numeric: true
+    })
+  );
+}
 
     async function loadDecks() {
       state.decks = (await getAllRecords("decks")).sort((a, b) => a.createdAt - b.createdAt);
