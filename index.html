@@ -12,9 +12,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="MTG Decks">
   <link rel="apple-touch-icon" href="./icon-192.png">
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MTG Deck Image App</title>
+
   <style>
     :root {
       --bg: #f7f7f7;
@@ -133,6 +131,41 @@
       background: #000;
       display: block;
       box-shadow: 0 2px 8px rgba(0,0,0,.25);
+      cursor: zoom-in;
+    }
+
+    .image-viewer {
+      width: min(96vw, 520px);
+      max-height: 96vh;
+      padding: 0;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    .image-viewer::backdrop {
+      background: rgba(0,0,0,.88);
+    }
+
+    .image-viewer img {
+      width: 100%;
+      max-height: 92vh;
+      object-fit: contain;
+      display: block;
+      border-radius: 14px;
+      cursor: zoom-out;
+    }
+
+    .viewer-close {
+      position: fixed;
+      top: 12px;
+      right: 12px;
+      width: 42px;
+      height: 42px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.92);
+      color: #000;
+      font-size: 28px;
+      z-index: 10;
     }
 
     .empty {
@@ -322,6 +355,11 @@
     </form>
   </dialog>
 
+  <dialog id="imageViewer" class="image-viewer">
+    <button class="viewer-close" onclick="closeImageViewer()">×</button>
+    <img id="viewerImage" alt="Carta ampliada">
+  </dialog>
+
   <script>
     const SCRYFALL = "https://api.scryfall.com";
 
@@ -333,7 +371,9 @@
       selectedCommanderName: "",
       selectedCardName: "",
       selectedCodeCard: null,
-      objectUrls: []
+      objectUrls: [],
+      cachedNames: [],
+      cachedNamesAt: 0
     };
 
     const $ = (id) => document.getElementById(id);
@@ -343,6 +383,7 @@
     async function init() {
       state.db = await openDB();
       await loadDecks();
+      await loadCardNameCache();
       bindEvents();
       renderHome();
     }
@@ -462,7 +503,7 @@
         tile.className = "tile";
         tile.innerHTML = `
           <button class="delete-btn" title="Borrar">×</button>
-          <img class="card-img" src="${blobUrl(card.imageBlob)}" alt="${escapeHtml(card.name)}" title="${escapeHtml(card.name)}">
+          <img class="card-img" src="${blobUrl(card.imageBlob)}" alt="${escapeHtml(card.name)}" title="${escapeHtml(card.name)}" onclick="openImageViewer(this.src)">
         `;
 
         tile.querySelector(".delete-btn").addEventListener("click", async (e) => {
@@ -602,6 +643,22 @@
       await openDeck(state.currentDeck.id);
     }
 
+    // ---------- Visor de imagen ----------
+
+    function openImageViewer(src) {
+      $("viewerImage").src = src;
+      $("imageViewer").showModal();
+    }
+
+    function closeImageViewer() {
+      $("imageViewer").close();
+      $("viewerImage").src = "";
+    }
+
+    $("imageViewer").addEventListener("click", (e) => {
+      if (e.target.id === "imageViewer" || e.target.id === "viewerImage") closeImageViewer();
+    });
+
     // ---------- Scryfall ----------
 
     async function fetchJson(url) {
@@ -632,27 +689,87 @@
     }
 
     async function showAutocomplete(value, container, onPick) {
-      const query = value.trim();
+      const query = value.trim().toLowerCase();
       if (query.length < 2) return hideSuggestions(container);
+
+      const localMatches = searchLocalCardNames(query, 12);
+      if (localMatches.length) {
+        renderSuggestions(localMatches, container, onPick);
+        return;
+      }
 
       try {
         const data = await fetchJson(`${SCRYFALL}/cards/autocomplete?q=${encodeURIComponent(query)}`);
         const names = (data.data || []).slice(0, 10);
-
-        if (!names.length) return hideSuggestions(container);
-
-        container.innerHTML = "";
-        for (const name of names) {
-          const row = document.createElement("div");
-          row.className = "suggestion";
-          row.textContent = name;
-          row.addEventListener("click", () => onPick(name));
-          container.appendChild(row);
-        }
-        container.style.display = "block";
+        renderSuggestions(names, container, onPick);
       } catch {
         hideSuggestions(container);
       }
+    }
+
+    function renderSuggestions(names, container, onPick) {
+      if (!names.length) return hideSuggestions(container);
+
+      container.innerHTML = "";
+      for (const name of names) {
+        const row = document.createElement("div");
+        row.className = "suggestion";
+        row.textContent = name;
+        row.addEventListener("click", () => onPick(name));
+        container.appendChild(row);
+      }
+      container.style.display = "block";
+    }
+
+    function searchLocalCardNames(query, limit = 10) {
+      if (!state.cachedNames.length) return [];
+
+      const startsWith = [];
+      const includes = [];
+
+      for (const name of state.cachedNames) {
+        const normalized = name.toLowerCase();
+        if (normalized.startsWith(query)) startsWith.push(name);
+        else if (normalized.includes(query)) includes.push(name);
+
+        if (startsWith.length >= limit) break;
+      }
+
+      return startsWith.concat(includes).slice(0, limit);
+    }
+
+    async function loadCardNameCache() {
+      const saved = localStorage.getItem("mtg-card-name-cache-v1");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          state.cachedNames = parsed.names || [];
+          state.cachedNamesAt = parsed.updatedAt || 0;
+        } catch {}
+      }
+
+      const ONE_WEEK = 7 * 24 * 60 * 60 * 1000;
+      const expired = !state.cachedNamesAt || Date.now() - state.cachedNamesAt > ONE_WEEK;
+
+      if (expired && navigator.onLine) {
+        refreshCardNameCache().catch(() => {});
+      }
+    }
+
+    async function refreshCardNameCache() {
+      const bulkInfo = await fetchJson(`${SCRYFALL}/bulk-data/oracle-cards`);
+      const cards = await fetchJson(bulkInfo.download_uri);
+
+      const uniqueNames = [...new Set(cards.map(card => card.name).filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b));
+
+      state.cachedNames = uniqueNames;
+      state.cachedNamesAt = Date.now();
+
+      localStorage.setItem("mtg-card-name-cache-v1", JSON.stringify({
+        updatedAt: state.cachedNamesAt,
+        names: uniqueNames
+      }));
     }
 
     async function previewCodeSearch(value) {
@@ -774,17 +891,5 @@
       }[char]));
     }
   </script>
-
-<script>
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("./service-worker.js");
-    });
-  }
-
-  if (navigator.storage && navigator.storage.persist) {
-    navigator.storage.persist();
-  }
-</script> 
 </body>
 </html>
