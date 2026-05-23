@@ -680,6 +680,7 @@
     }
 
     function renderHome() {
+      disarmExit();
       clearObjectUrls();
       state.currentDeck = null;
       $("screenTitle").textContent = "Mazos";
@@ -1096,9 +1097,10 @@ function handleBackButton() {
 
   // Si estoy dentro de un mazo, vuelve a la pantalla de mazos.
   if (state.currentDeck) {
-    renderHome();
-    return;
-  }
+  disarmExit();
+  renderHome();
+  return;
+}
 
   // Si ya avisó una vez, deja salir.
   if (state.exitArmed) {
