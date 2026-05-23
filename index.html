@@ -147,7 +147,31 @@
       border: 1px solid var(--border);
       flex: 0 0 auto;
     }
-
+    .back-toast {
+      position: fixed;
+      left: 50%;
+      bottom: 28px;
+      transform: translateX(-50%) translateY(20px);
+      background: rgba(10,10,15,.94);
+      color: var(--gold-light);
+      border: 1px solid var(--gold-dim);
+      border-radius: 999px;
+      padding: 10px 16px;
+      font-size: 14px;
+      font-family: 'Cinzel', serif;
+      letter-spacing: .03em;
+      z-index: 9999;
+      opacity: 0;
+      pointer-events: none;
+      box-shadow: 0 4px 20px rgba(0,0,0,.55);
+      transition: opacity .18s ease, transform .18s ease;
+      white-space: nowrap;
+    }
+    
+    .back-toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
     .back-btn:hover {
       background: var(--border);
       color: var(--gold-light);
@@ -509,7 +533,9 @@
 
     <main id="content"></main>
   </div>
-
+  <div id="backToast" class="back-toast">
+    Vuelva a presionar atrás para salir
+  </div>
   <!-- ── Deck dialog ── -->
   <dialog id="deckDialog">
     <div class="dialog-inner">
@@ -578,7 +604,9 @@
       selectedCodeCard: null,
       objectUrls: [],
       cachedNames: [],
-      cachedNamesAt: 0
+      cachedNamesAt: 0,
+      exitArmed: false,
+      exitTimer: null
     };
 
     const $ = (id) => document.getElementById(id);
@@ -591,6 +619,7 @@
       await loadCardNameCache();
       bindEvents();
       renderHome();
+      setupBackButtonHandler();
     }
 
     function bindEvents() {
@@ -599,7 +628,10 @@
         else openDeckDialog();
       });
 
-      $("backBtn").addEventListener("click", renderHome);
+      $("backBtn").addEventListener("click", () => {
+        if (state.currentDeck) history.back();
+        else renderHome();
+      });
 
       $("deckForm").addEventListener("submit", async (e) => {
         e.preventDefault();
@@ -672,7 +704,7 @@
           <span class="label">${escapeHtml(deck.name)}</span>
         `;
 
-        tile.addEventListener("click", () => openDeck(deck.id));
+        tile.addEventListener("click", () => openDeck(deck.id, true));
         tile.querySelector(".delete-btn").addEventListener("click", async (e) => {
           e.stopPropagation();
           await deleteDeck(deck.id);
@@ -682,10 +714,15 @@
       }
     }
 
-    async function openDeck(deckId) {
+    async function openDeck(deckId, addToHistory = false) {
       clearObjectUrls();
       const deck = state.decks.find(d => d.id === deckId);
       if (!deck) return;
+    
+      if (addToHistory) {
+        disarmExit();
+        history.pushState({ screen: "deck", deckId }, "", location.href);
+      }
 
       state.currentDeck = deck;
       state.cards = await getCardsByDeck(deck.id);
@@ -1028,7 +1065,81 @@
     async function loadDecks() {
       state.decks = (await getAllRecords("decks")).sort((a, b) => a.createdAt - b.createdAt);
     }
+// ---------- Android back button ----------
 
+function setupBackButtonHandler() {
+  history.replaceState({ screen: "home" }, "", location.href);
+  history.pushState({ screen: "home-guard" }, "", location.href);
+
+  window.addEventListener("popstate", handleBackButton);
+}
+
+function handleBackButton() {
+  // Si hay un modal abierto, primero lo cierra.
+  if ($("imageViewer")?.open) {
+    closeImageViewer();
+    pushHomeGuard();
+    return;
+  }
+
+  if ($("deckDialog")?.open) {
+    closeDeckDialog();
+    pushHomeGuard();
+    return;
+  }
+
+  if ($("cardDialog")?.open) {
+    closeCardDialog();
+    pushHomeGuard();
+    return;
+  }
+
+  // Si estoy dentro de un mazo, vuelve a la pantalla de mazos.
+  if (state.currentDeck) {
+    renderHome();
+    return;
+  }
+
+  // Si ya avisó una vez, deja salir.
+  if (state.exitArmed) {
+    window.removeEventListener("popstate", handleBackButton);
+    history.back();
+    return;
+  }
+
+  // Primer toque atrás en home: muestra aviso y bloquea salida.
+  showBackToast();
+  state.exitArmed = true;
+
+  clearTimeout(state.exitTimer);
+  state.exitTimer = setTimeout(() => {
+    disarmExit();
+  }, 2200);
+
+  pushHomeGuard();
+}
+
+function pushHomeGuard() {
+  history.pushState({ screen: "home-guard" }, "", location.href);
+}
+
+function showBackToast() {
+  const toast = $("backToast");
+  if (!toast) return;
+  toast.classList.add("show");
+}
+
+function hideBackToast() {
+  const toast = $("backToast");
+  if (!toast) return;
+  toast.classList.remove("show");
+}
+
+function disarmExit() {
+  state.exitArmed = false;
+  clearTimeout(state.exitTimer);
+  hideBackToast();
+}
     // ---------- Helpers ----------
 
     function debounce(fn, wait) {
