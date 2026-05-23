@@ -1,4 +1,4 @@
-const CACHE_NAME = "mtg-decks-app-v9";
+const CACHE_NAME = "mtg-decks-app-v13";
 
 const APP_FILES = [
   "./",
