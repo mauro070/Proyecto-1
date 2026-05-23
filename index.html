@@ -221,27 +221,31 @@
     }
     .tile:hover .card-img { opacity: .88; }
 
-    /* ── delete button ── */
-    .delete-btn {
-      position: absolute;
-      top: 7px;
-      right: 7px;
-      background: rgba(10,10,15,.82);
-      color: #c0392b;
-      width: 26px;
-      height: 26px;
-      border-radius: 50%;
-      font-size: 16px;
-      display: grid;
-      place-items: center;
-      z-index: 3;
-      border: 1px solid rgba(192,57,43,.35);
-      opacity: 0;
-      transition: opacity .15s, background .15s;
-    }
+.delete-btn {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  background: rgba(10,10,15,.88);
+  color: #e57373;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 17px;
+  display: grid;
+  place-items: center;
+  z-index: 20;
+  border: 1px solid rgba(192,57,43,.55);
+  opacity: 1;
+  pointer-events: auto;
+  box-shadow: 0 2px 8px rgba(0,0,0,.45);
+  transition: background .15s, color .15s, transform .15s;
+}
 
-    .tile:hover .delete-btn { opacity: 1; }
-    .delete-btn:hover { background: var(--danger); color: #fff; }
+.delete-btn:hover {
+  background: var(--danger);
+  color: #fff;
+  transform: scale(1.08);
+}
 
     /* ── empty state ── */
     .empty {
