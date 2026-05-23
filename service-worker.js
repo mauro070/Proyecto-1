@@ -1,6 +1,6 @@
-const CACHE_NAME = "mtg-decks-v1";
+const CACHE_NAME = "mtg-decks-app-v2";
 
-const FILES_TO_CACHE = [
+const APP_FILES = [
   "./",
   "./index.html",
   "./manifest.webmanifest",
@@ -10,8 +10,9 @@ const FILES_TO_CACHE = [
 
 self.addEventListener("install", event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(FILES_TO_CACHE))
+    caches.open(CACHE_NAME).then(cache => cache.addAll(APP_FILES))
   );
+  self.skipWaiting();
 });
 
 self.addEventListener("activate", event => {
@@ -24,12 +25,31 @@ self.addEventListener("activate", event => {
       )
     )
   );
+  self.clients.claim();
 });
 
 self.addEventListener("fetch", event => {
+  const req = event.request;
+
+  if (req.url.includes("api.scryfall.com")) {
+    event.respondWith(fetch(req));
+    return;
+  }
+
+  if (req.mode === "navigate") {
+    event.respondWith(
+      fetch(req)
+        .then(res => {
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put("./index.html", copy));
+          return res;
+        })
+        .catch(() => caches.match("./index.html"))
+    );
+    return;
+  }
+
   event.respondWith(
-    caches.match(event.request).then(cached => {
-      return cached || fetch(event.request);
-    })
+    caches.match(req).then(cached => cached || fetch(req))
   );
 });
