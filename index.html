@@ -1,225 +1,22 @@
-
-Claude terminó la respuesta
-
-manifest.webmanifest
-webmanifest
-
-
-index.html
-1 línea
-
-html
-
-
-service-worker.js
-35 líneas
-
-js
-
-Hola Claude! Estoy haciendo una app para el celular. Consta de un index.html, manifest.webmanifest, service-worker.js, icon-192.png y icon-512.png.
-
-está cargada en github y cuando la abro desde el celular me da la opcion de instalarla.
-me gustaría mejorarle la visual a la aplicación, solo eso.
-
-19:28
-Veo que el index.html llegó vacío. ¿Podés pegar el contenido del archivo acá para que pueda verlo y sugerirte mejoras visuales?
-
-
-<!DOCTYPE html> <html lang="es"> <head> <meta charset="UTF-8" /> <meta name="viewport" content="width=device-width, initial-scale=1.0" /> <title>MTG Deck Image App</title> <link rel="manifest" href="./manifest.webmanifest"> <meta name="theme-color" content="#000000"> <meta na
-
-pasted
-
-{
-  "name": "MTG Decks",
-  "short_name": "MTG Decks",
-  "description": "Mazos y cartas MTG offline",
-  "start_url": "./",
-  "scope": "./",
-  "display": "standalone",
-  "background_color": "
-#ffffff",
-  "theme_color": "
-#000000",
-  "orientation": "portrait",
-  "icons": [
-    {
-      "src": "./icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "./icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    }
-  ]
-}
-
-const CACHE_NAME = "mtg-decks-app-v2";
-const APP_FILES = [
-  "./",
-  "./index.html",
-  "./manifest.webmanifest",
-  "./icon-192.png",
-  "./icon-512.png"
-];
-self.addEventListener("install", event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(APP_FILES))
-  );
-  self.skipWaiting();
-});
-self.addEventListener("activate", event => {
-  event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(
-        keys
-          .filter(key => key !== CACHE_NAME)
-          .map(key => caches.delete(key))
-      )
-    )
-  );
-  self.clients.claim();
-});
-self.addEventListener("fetch", event => {
-  const req = event.request;
-  if (req.url.includes("api.scryfall.com")) {
-    event.respondWith(fetch(req));
-    return;
-  }
-  if (req.mode === "navigate") {
-    event.respondWith(
-      fetch(req)
-        .then(res => {
-          const copy = res.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put("./index.html", copy));
-          return res;
-        })
-        .catch(() => caches.match("./index.html"))
-    );
-    return;
-  }
-  event.respondWith(
-    caches.match(req).then(cached => cached || fetch(req))
-  );
-});
-
-pegué los 3 archivos
-
-Mostrar más
-19:28
-Perfecto, tengo todo. La app está muy bien estructurada. Voy a rediseñarla con una estética temática de MTG: oscura, con detalles dorados, tipografía más evocadora y mejor jerarquía visual. La lógica no la toco, solo el CSS y el HTML visual.
-
-
-Archivo visualizado, ejecutó un comando, creó un archivo
-Archivo visualizado, ejecutó un comando, creó un archivo
-Acá está el index.html rediseñado. Los cambios visuales que hice:
-
-Paleta y atmósfera
-
-Fondo oscuro casi negro (
-#0a0a0f) con textura de ruido sutil
-Acentos dorados para todo lo interactivo — botones, bordes, títulos
-Línea dorada decorativa en el header y en los diálogos
-Tipografía
-
-Cinzel para títulos, labels de mazos y botones (serif con carácter romano, muy MTG)
-Crimson Pro para el cuerpo y los inputs (elegante, legible)
-Componentes
-
-Tiles con borde redondeado, hover con elevación y glow dorado sutil
-Botón + dorado con gradiente y sombra luminosa
-Label del mazo con borde superior dorado sobre fondo oscuro
-Botón de borrar oculto hasta hacer hover (menos ruido visual)
-Diálogos oscuros con franja dorada superior y backdrop blur
-Todo lo demás queda igual — la lógica, IndexedDB, Scryfall, el service worker y el manifest no se tocaron. Solo reemplazás el index.html.
-
-
-Index
-Código · HTML 
-
-<!DOCTYPE html> <html lang="es"> <head> <meta charset="UTF-8" /> <meta name="viewport" content="width=device-width, initial-scale=1.0" /> <title>MTG Deck Image App</title> <link rel="manifest" href="./manifest.webmanifest"> <meta name="theme-color" content="#0a0a0f"> <meta na
-
-pasted
-
-después de muchos cambio, quedó así. me gustaría mejorar el botón de +, se ve medio chico el + que tiene dentro. capaz que le daría alguna forma "más mtg". y cuando abro las imagenes para agrandarlas, no se ven centradas en la pantalla. qué otras cosas le podemos agregar?
-
-20:56
-Veo exactamente lo que describe. Déjame revisar el código actual y sugerirte mejoras concretas.
-
-Sobre el botón y el visor, son fixes claros. Antes de proponer qué más agregar, quiero entender un poco cómo usás la app:
-
-P: ¿Cómo organizás los mazos principalmente?
-R: Un mazo por comandante (EDH/Commander)
-
-P: ¿Qué features te parecen más útiles para agregar? (Seleccione todas las que correspondan)
-R: [No preference]
-
-20:56
-Perfecto. Entonces el flujo es: un mazo = un comandante, con sus cartas clave guardadas offline.
-
-Voy a hacer los fixes que pediste más algunas mejoras coherentes con esa dinámica:
-
-Fixes:
-
-Botón + más grande y con forma de pentágono (símbolo MTG) en lugar de círculo
-Visor de imagen centrado correctamente
-Extras que tienen sentido para EDH:
-
-Contador de cartas en cada tile de mazo
-Nombre del comandante visible debajo del nombre del mazo
-
-Prepare working copy
-Prepare working copy
-Voy a tomar el código del documento 4 (la versión más reciente que pegaste) y aplicarle los cambios:
-
-
-Se ejecutaron 2 comandos, archivo leído
-Se ejecutaron 2 comandos, archivo leído
-Listo. Los cambios que hice:
-
-Fixes:
-
-Botón + → ahora tiene forma de pentágono MTG (el símbolo de los cinco colores del mana), con gradiente dorado y efecto de rotación suave al hacer hover. El + es más grande (30px, negrita).
-Visor de imagen → centrado con position: fixed + transform: translate(-50%, -50%), que es el método más confiable en mobile para centrar un <dialog>.
-Extras para EDH:
-
-Nombre del comandante aparece debajo del nombre del mazo en cada tile, en cursiva y color gris sutil — así de un vistazo sabés qué comandante tiene cada mazo sin abrirlo.
-Contador de cartas en una pastilla dorada en la esquina inferior derecha del tile ("3 cartas", "0 cartas", etc.), que se carga automáticamente al renderizar la pantalla principal.
-Todo lo demás quedó exactamente igual.
-
-
-Index
-Código · HTML 
-
-
-
-
-
-Claude es IA y puede cometer errores. Por favor, verifica nuevamente las respuestas.
-
-
-raw
-Index · HTML
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
- 
+
   <title>MTG Deck Image App</title>
- 
+
   <link rel="manifest" href="./manifest.webmanifest">
   <meta name="theme-color" content="#0a0a0f">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="MTG Decks">
   <link rel="apple-touch-icon" href="./icon-192-2.png">
- 
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
- 
+
   <style>
     :root {
       --bg:        #0a0a0f;
@@ -235,9 +32,9 @@ Index · HTML
       --danger-dim:#7a2318;
       --glow:      rgba(201,168,76,.18);
     }
- 
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
- 
+
     body {
       font-family: 'Crimson Pro', Georgia, serif;
       background: var(--bg);
@@ -245,11 +42,11 @@ Index · HTML
       min-height: 100vh;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
     }
- 
+
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: var(--bg); }
     ::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 2px; }
- 
+
     .app {
       max-width: 520px;
       min-height: 100vh;
@@ -259,7 +56,7 @@ Index · HTML
       position: relative;
       overflow: visible;
     }
- 
+
     .app::before {
       content: '';
       position: absolute;
@@ -268,7 +65,7 @@ Index · HTML
       background: linear-gradient(90deg, transparent, var(--gold), transparent);
       z-index: 10;
     }
- 
+
     /* ── header ── */
     header {
       display: flex;
@@ -282,7 +79,7 @@ Index · HTML
       z-index: 999;
       backdrop-filter: blur(8px);
     }
- 
+
     h1 {
       font-family: 'Cinzel', serif;
       font-size: 20px;
@@ -295,7 +92,7 @@ Index · HTML
       text-shadow: 0 0 20px rgba(201,168,76,.4);
       flex: 1;
     }
- 
+
     .ornament {
       font-size: 22px;
       color: var(--gold-dim);
@@ -303,7 +100,7 @@ Index · HTML
       line-height: 1;
       user-select: none;
     }
- 
+
     /* ── botones ── */
     button {
       border: 0;
@@ -311,7 +108,7 @@ Index · HTML
       font-family: inherit;
       transition: all .18s ease;
     }
- 
+
     /* Botón + con forma de pentágono MTG */
     .round-btn {
       position: relative;
@@ -323,7 +120,7 @@ Index · HTML
       display: grid;
       place-items: center;
     }
- 
+
     .round-btn svg.pentagon-bg {
       position: absolute;
       inset: 0;
@@ -332,17 +129,17 @@ Index · HTML
       transition: filter .18s ease, transform .18s ease;
       filter: drop-shadow(0 0 8px rgba(201,168,76,.45));
     }
- 
+
     .round-btn:hover svg.pentagon-bg {
       filter: drop-shadow(0 0 16px rgba(201,168,76,.75));
       transform: rotate(5deg) scale(1.07);
     }
- 
+
     .round-btn:active svg.pentagon-bg {
       transform: scale(.94);
       filter: drop-shadow(0 0 6px rgba(201,168,76,.3));
     }
- 
+
     .round-btn .plus-icon {
       position: relative;
       z-index: 2;
@@ -354,7 +151,7 @@ Index · HTML
       /* nudge vertical center inside pentagon */
       margin-top: -2px;
     }
- 
+
     .back-btn {
       display: none;
       width: 38px;
@@ -366,12 +163,12 @@ Index · HTML
       border: 1px solid var(--border);
       flex: 0 0 auto;
     }
- 
+
     .back-btn:hover {
       background: var(--border);
       color: var(--gold-light);
     }
- 
+
     .back-toast {
       position: fixed;
       left: 50%;
@@ -392,12 +189,12 @@ Index · HTML
       transition: opacity .18s ease, transform .18s ease;
       white-space: nowrap;
     }
- 
+
     .back-toast.show {
       opacity: 1;
       transform: translateX(-50%) translateY(0);
     }
- 
+
     /* ── grid ── */
     .grid {
       display: grid;
@@ -406,7 +203,7 @@ Index · HTML
       padding: 20px 16px;
       align-items: start;
     }
- 
+
     /* ── deck tile ── */
     .tile {
       position: relative;
@@ -419,15 +216,15 @@ Index · HTML
       transition: transform .2s ease, box-shadow .2s ease;
       box-shadow: 0 4px 16px rgba(0,0,0,.4);
     }
- 
+
     .tile:hover {
       transform: translateY(-3px);
       box-shadow: 0 8px 28px rgba(0,0,0,.6), 0 0 12px var(--glow);
       border-color: var(--gold-dim);
     }
- 
+
     .tile:active { transform: translateY(0); }
- 
+
     .cover {
       width: 100%;
       aspect-ratio: 0.716;
@@ -436,9 +233,9 @@ Index · HTML
       display: block;
       transition: opacity .2s;
     }
- 
+
     .tile:hover .cover { opacity: .88; }
- 
+
     /* deck label: nombre del mazo */
     .label {
       display: block;
@@ -455,7 +252,7 @@ Index · HTML
       border-top: 1px solid var(--gold-dim);
       text-shadow: 0 0 12px rgba(201,168,76,.3);
     }
- 
+
     /* comandante + contador debajo del nombre */
     .label-sub {
       display: flex;
@@ -465,7 +262,7 @@ Index · HTML
       background: #0e0e18;
       gap: 6px;
     }
- 
+
     .commander-name {
       font-family: 'Crimson Pro', serif;
       font-size: 12px;
@@ -477,7 +274,7 @@ Index · HTML
       flex: 1;
       min-width: 0;
     }
- 
+
     .card-count {
       font-family: 'Cinzel', serif;
       font-size: 10px;
@@ -489,7 +286,7 @@ Index · HTML
       border-radius: 20px;
       padding: 1px 6px;
     }
- 
+
     /* card inside deck */
     .card-img {
       width: 100%;
@@ -499,7 +296,7 @@ Index · HTML
       transition: opacity .2s;
     }
     .tile:hover .card-img { opacity: .88; }
- 
+
     .delete-btn {
       position: absolute;
       top: 7px;
@@ -519,13 +316,13 @@ Index · HTML
       box-shadow: 0 2px 8px rgba(0,0,0,.45);
       transition: background .15s, color .15s, transform .15s;
     }
- 
+
     .delete-btn:hover {
       background: var(--danger);
       color: #fff;
       transform: scale(1.08);
     }
- 
+
     /* ── empty state ── */
     .empty {
       padding: 48px 24px;
@@ -535,7 +332,7 @@ Index · HTML
       font-style: italic;
       line-height: 1.6;
     }
- 
+
     .empty::before {
       content: '⚔';
       display: block;
@@ -544,7 +341,7 @@ Index · HTML
       opacity: .3;
       font-style: normal;
     }
- 
+
     /* ── image viewer ── */
     .image-viewer {
       width: min(96vw, 480px);
@@ -560,9 +357,9 @@ Index · HTML
       transform: translate(-50%, -50%);
       margin: 0;
     }
- 
+
     .image-viewer::backdrop { background: rgba(0,0,0,.92); }
- 
+
     .image-viewer img {
       width: 100%;
       max-height: 88vh;
@@ -571,7 +368,7 @@ Index · HTML
       border-radius: 14px;
       cursor: zoom-out;
     }
- 
+
     .viewer-close {
       position: fixed;
       top: 12px;
@@ -585,9 +382,9 @@ Index · HTML
       z-index: 10;
       border: 1px solid var(--gold-dim);
     }
- 
+
     .viewer-close:hover { background: rgba(201,168,76,.3); }
- 
+
     /* ── dialog ── */
     dialog {
       width: min(94vw, 440px);
@@ -598,11 +395,11 @@ Index · HTML
       box-shadow: 0 24px 80px rgba(0,0,0,.7), 0 0 0 1px var(--border), 0 0 40px rgba(201,168,76,.08);
       color: var(--text);
     }
- 
+
     dialog::backdrop { background: rgba(0,0,0,.65); backdrop-filter: blur(3px); }
- 
+
     .dialog-inner { padding: 22px 20px 20px; }
- 
+
     dialog::before {
       content: '';
       display: block;
@@ -610,7 +407,7 @@ Index · HTML
       background: linear-gradient(90deg, transparent, var(--gold), transparent);
       border-radius: 2px 2px 0 0;
     }
- 
+
     .dialog-title {
       font-family: 'Cinzel', serif;
       font-size: 18px;
@@ -620,7 +417,7 @@ Index · HTML
       letter-spacing: .04em;
       text-shadow: 0 0 16px rgba(201,168,76,.3);
     }
- 
+
     label {
       display: block;
       font-size: 12px;
@@ -630,7 +427,7 @@ Index · HTML
       text-transform: uppercase;
       margin: 14px 0 5px;
     }
- 
+
     input {
       width: 100%;
       padding: 11px 13px;
@@ -642,15 +439,15 @@ Index · HTML
       color: var(--text);
       transition: border-color .18s, box-shadow .18s;
     }
- 
+
     input::placeholder { color: var(--muted); opacity: .7; }
- 
+
     input:focus {
       outline: none;
       border-color: var(--gold-dim);
       box-shadow: 0 0 0 3px rgba(201,168,76,.12);
     }
- 
+
     .actions {
       display: flex;
       justify-content: flex-end;
@@ -659,7 +456,7 @@ Index · HTML
       padding-top: 16px;
       border-top: 1px solid var(--border);
     }
- 
+
     .btn {
       padding: 9px 18px;
       border-radius: 8px;
@@ -671,29 +468,29 @@ Index · HTML
       color: var(--muted);
       border: 1px solid var(--border);
     }
- 
+
     .btn:hover { color: var(--text); border-color: var(--muted); }
- 
+
     .btn.primary {
       background: linear-gradient(145deg, var(--gold), #8a5c20);
       color: #0a0a0f;
       border: 0;
       box-shadow: 0 0 10px rgba(201,168,76,.25);
     }
- 
+
     .btn.primary:hover {
       background: linear-gradient(145deg, var(--gold-light), var(--gold));
       box-shadow: 0 0 18px rgba(201,168,76,.4);
     }
- 
+
     .btn.danger {
       background: var(--danger-dim);
       color: #ffaaa0;
       border: 1px solid rgba(192,57,43,.4);
     }
- 
+
     .btn.danger:hover { background: var(--danger); color: #fff; }
- 
+
     .suggestions {
       display: none;
       margin-top: 4px;
@@ -703,7 +500,7 @@ Index · HTML
       overflow: auto;
       background: var(--surface2);
     }
- 
+
     .suggestion {
       padding: 9px 12px;
       border-bottom: 1px solid var(--border);
@@ -711,14 +508,14 @@ Index · HTML
       font-size: 15px;
       transition: background .12s;
     }
- 
+
     .suggestion:last-child { border-bottom: 0; }
- 
+
     .suggestion:hover {
       background: var(--border);
       color: var(--gold-light);
     }
- 
+
     .hint {
       color: var(--muted);
       font-size: 13px;
@@ -726,7 +523,7 @@ Index · HTML
       line-height: 1.4;
       font-style: italic;
     }
- 
+
     .preview {
       display: none;
       margin-top: 8px;
@@ -737,7 +534,7 @@ Index · HTML
       font-size: 14px;
       color: var(--gold-light);
     }
- 
+
     .status {
       margin-top: 10px;
       color: var(--muted);
@@ -745,9 +542,9 @@ Index · HTML
       font-size: 14px;
       font-style: italic;
     }
- 
+
     .error { color: #e57373; }
- 
+
     @media (max-width: 380px) {
       .grid { gap: 12px; padding: 14px 12px; }
       h1 { font-size: 17px; }
@@ -759,7 +556,7 @@ Index · HTML
   <div class="app">
     <header>
       <button id="backBtn" class="back-btn" title="Volver">←</button>
- 
+
       <!-- Botón + con pentágono MTG -->
       <button id="addBtn" class="round-btn" title="Agregar">
         <svg class="pentagon-bg" viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
@@ -779,16 +576,16 @@ Index · HTML
         </svg>
         <span class="plus-icon">+</span>
       </button>
- 
+
       <h1 id="screenTitle">Mazos</h1>
       <span class="ornament">✦</span>
     </header>
- 
+
     <main id="content"></main>
   </div>
- 
+
   <div id="backToast" class="back-toast">Vuelva a presionar atrás para salir</div>
- 
+
   <!-- ── Deck dialog ── -->
   <dialog id="deckDialog">
     <div class="dialog-inner">
@@ -796,14 +593,14 @@ Index · HTML
       <form method="dialog" id="deckForm">
         <label for="deckName">Nombre del mazo</label>
         <input id="deckName" autocomplete="off" placeholder="Ej: Mazo 1" />
- 
+
         <label for="commanderName">Comandante</label>
         <input id="commanderName" autocomplete="off" placeholder="Ej: Atraxa" />
         <div id="commanderSuggestions" class="suggestions"></div>
         <div class="hint">Buscá el comandante por nombre. La imagen quedará guardada offline.</div>
- 
+
         <div id="deckStatus" class="status"></div>
- 
+
         <div class="actions">
           <button type="button" class="btn" onclick="closeDeckDialog()">Cancelar</button>
           <button type="submit" class="btn primary">Confirmar</button>
@@ -811,7 +608,7 @@ Index · HTML
       </form>
     </div>
   </dialog>
- 
+
   <!-- ── Card dialog ── -->
   <dialog id="cardDialog">
     <div class="dialog-inner">
@@ -820,14 +617,14 @@ Index · HTML
         <label for="cardName">Nombre de la carta</label>
         <input id="cardName" autocomplete="off" placeholder="Ej: Sol Ring" />
         <div id="cardSuggestions" class="suggestions"></div>
- 
+
         <label for="cardCode">Código de identificación</label>
         <input id="cardCode" autocomplete="off" placeholder="Ej: war 014" />
         <div id="codePreview" class="preview"></div>
         <div class="hint">Nombre o código. El código tiene prioridad si lo completás.</div>
- 
+
         <div id="cardStatus" class="status"></div>
- 
+
         <div class="actions">
           <button type="button" class="btn" onclick="closeCardDialog()">Cancelar</button>
           <button type="submit" class="btn primary">Confirmar</button>
@@ -835,16 +632,16 @@ Index · HTML
       </form>
     </div>
   </dialog>
- 
+
   <!-- ── Image viewer ── -->
   <dialog id="imageViewer" class="image-viewer">
     <button class="viewer-close" onclick="closeImageViewer()">×</button>
     <img id="viewerImage" alt="Carta ampliada">
   </dialog>
- 
+
   <script>
     const SCRYFALL = "https://api.scryfall.com";
- 
+
     const state = {
       db: null,
       decks: [],
@@ -861,11 +658,11 @@ Index · HTML
       // cache de conteo de cartas por mazo
       cardCounts: {}
     };
- 
+
     const $ = (id) => document.getElementById(id);
- 
+
     document.addEventListener("DOMContentLoaded", init);
- 
+
     async function init() {
       state.db = await openDB();
       await loadDecks();
@@ -874,28 +671,28 @@ Index · HTML
       renderHome();
       setupBackButtonHandler();
     }
- 
+
     function bindEvents() {
       $("addBtn").addEventListener("click", () => {
         if (state.currentDeck) openCardDialog();
         else openDeckDialog();
       });
- 
+
       $("backBtn").addEventListener("click", () => {
         if (state.currentDeck) history.back();
         else renderHome();
       });
- 
+
       $("deckForm").addEventListener("submit", async (e) => {
         e.preventDefault();
         await createDeck();
       });
- 
+
       $("cardForm").addEventListener("submit", async (e) => {
         e.preventDefault();
         await addCardToDeck();
       });
- 
+
       $("commanderName").addEventListener("input", debounce(async (e) => {
         state.selectedCommanderName = e.target.value.trim();
         await showAutocomplete(e.target.value, $("commanderSuggestions"), (name) => {
@@ -904,7 +701,7 @@ Index · HTML
           hideSuggestions($("commanderSuggestions"));
         });
       }, 300));
- 
+
       $("cardName").addEventListener("input", debounce(async (e) => {
         state.selectedCardName = e.target.value.trim();
         await showAutocomplete(e.target.value, $("cardSuggestions"), (name) => {
@@ -913,25 +710,25 @@ Index · HTML
           hideSuggestions($("cardSuggestions"));
         });
       }, 300));
- 
+
       $("cardCode").addEventListener("input", debounce(async (e) => {
         await previewCodeSearch(e.target.value);
       }, 450));
     }
- 
+
     // ---------- Render ----------
- 
+
     function clearObjectUrls() {
       for (const url of state.objectUrls) URL.revokeObjectURL(url);
       state.objectUrls = [];
     }
- 
+
     function blobUrl(blob) {
       const url = URL.createObjectURL(blob);
       state.objectUrls.push(url);
       return url;
     }
- 
+
     async function loadCardCounts() {
       state.cardCounts = {};
       for (const deck of state.decks) {
@@ -939,7 +736,7 @@ Index · HTML
         state.cardCounts[deck.id] = cards.length;
       }
     }
- 
+
     function renderHome() {
       disarmExit();
       clearObjectUrls();
@@ -947,18 +744,18 @@ Index · HTML
       $("screenTitle").textContent = "Mazos";
       $("backBtn").style.display = "none";
       $("addBtn").style.display = "grid";
- 
+
       const content = $("content");
       if (!state.decks.length) {
         content.innerHTML = `<div class="empty">Tocá + para crear tu primer mazo.<br>El cementerio de tokens aguarda.</div>`;
         return;
       }
- 
+
       // Cargar conteos y luego renderizar
       loadCardCounts().then(() => {
         content.innerHTML = `<div class="grid"></div>`;
         const grid = content.querySelector(".grid");
- 
+
         for (const deck of state.decks) {
           const count = state.cardCounts[deck.id] || 0;
           const tile = document.createElement("div");
@@ -972,44 +769,44 @@ Index · HTML
               <span class="card-count">${count} carta${count !== 1 ? 's' : ''}</span>
             </div>
           `;
- 
+
           tile.addEventListener("click", () => openDeck(deck.id, true));
           tile.querySelector(".delete-btn").addEventListener("click", async (e) => {
             e.stopPropagation();
             await deleteDeck(deck.id);
           });
- 
+
           grid.appendChild(tile);
         }
       });
     }
- 
+
     async function openDeck(deckId, addToHistory = false) {
       clearObjectUrls();
       const deck = state.decks.find(d => d.id === deckId);
       if (!deck) return;
- 
+
       if (addToHistory) {
         disarmExit();
         history.pushState({ screen: "deck", deckId }, "", location.href);
       }
- 
+
       state.currentDeck = deck;
       state.cards = await getCardsByDeck(deck.id);
- 
+
       $("screenTitle").textContent = deck.name;
       $("backBtn").style.display = "inline-grid";
       $("addBtn").style.display = "grid";
- 
+
       const content = $("content");
       if (!state.cards.length) {
         content.innerHTML = `<div class="empty">Tocá + para guardar cartas dentro de este mazo.</div>`;
         return;
       }
- 
+
       content.innerHTML = `<div class="grid"></div>`;
       const grid = content.querySelector(".grid");
- 
+
       for (const card of state.cards) {
         const tile = document.createElement("div");
         tile.className = "tile";
@@ -1017,18 +814,18 @@ Index · HTML
           <button class="delete-btn" title="Borrar">×</button>
           <img class="card-img" src="${blobUrl(card.imageBlob)}" alt="${escapeHtml(card.name)}" title="${escapeHtml(card.name)}" onclick="openImageViewer(this.src)">
         `;
- 
+
         tile.querySelector(".delete-btn").addEventListener("click", async (e) => {
           e.stopPropagation();
           await deleteCard(card.id);
         });
- 
+
         grid.appendChild(tile);
       }
     }
- 
+
     // ---------- Dialogs ----------
- 
+
     function openDeckDialog() {
       $("deckName").value = "";
       $("commanderName").value = "";
@@ -1038,9 +835,9 @@ Index · HTML
       $("deckDialog").showModal();
       setTimeout(() => $("deckName").focus(), 60);
     }
- 
+
     function closeDeckDialog() { $("deckDialog").close(); }
- 
+
     function openCardDialog() {
       $("cardName").value = "";
       $("cardCode").value = "";
@@ -1052,30 +849,30 @@ Index · HTML
       $("cardDialog").showModal();
       setTimeout(() => $("cardName").focus(), 60);
     }
- 
+
     function closeCardDialog() { $("cardDialog").close(); }
- 
+
     // ---------- Core actions ----------
- 
+
     async function createDeck() {
       const status = $("deckStatus");
       let name = $("deckName").value.trim();
       const commanderName = $("commanderName").value.trim();
- 
+
       if (!commanderName) return setStatus(status, "Falta el comandante.", true);
- 
+
       try {
         setStatus(status, "Buscando comandante...");
         const card = await fetchCardByName(commanderName);
- 
+
         if (!name) name = card.name;
- 
+
         const imageUrl = getImageUrl(card);
         if (!imageUrl) throw new Error("La carta no tiene imagen disponible.");
- 
+
         setStatus(status, "Guardando imagen offline...");
         const imageBlob = await downloadImageBlob(imageUrl);
- 
+
         const deck = {
           id: crypto.randomUUID(),
           name,
@@ -1084,7 +881,7 @@ Index · HTML
           commanderImageBlob: imageBlob,
           createdAt: Date.now()
         };
- 
+
         await putRecord("decks", deck);
         await loadDecks();
         closeDeckDialog();
@@ -1093,15 +890,15 @@ Index · HTML
         setStatus(status, err.message || "No pude crear el mazo.", true);
       }
     }
- 
+
     async function addCardToDeck() {
       const status = $("cardStatus");
       const name = $("cardName").value.trim();
       const code = $("cardCode").value.trim();
- 
+
       if (!state.currentDeck) return setStatus(status, "Primero abrí un mazo.", true);
       if (!name && !code) return setStatus(status, "Escribí nombre o código.", true);
- 
+
       try {
         setStatus(status, "Buscando carta...");
         let card;
@@ -1110,13 +907,13 @@ Index · HTML
         } else {
           card = await fetchCardByName(name);
         }
- 
+
         const imageUrl = getImageUrl(card);
         if (!imageUrl) throw new Error("La carta no tiene imagen disponible.");
- 
+
         setStatus(status, "Guardando imagen offline...");
         const imageBlob = await downloadImageBlob(imageUrl);
- 
+
         const record = {
           id: crypto.randomUUID(),
           deckId: state.currentDeck.id,
@@ -1128,7 +925,7 @@ Index · HTML
           imageBlob,
           createdAt: Date.now()
         };
- 
+
         await putRecord("cards", record);
         closeCardDialog();
         await openDeck(state.currentDeck.id);
@@ -1136,7 +933,7 @@ Index · HTML
         setStatus(status, err.message || "No pude agregar la carta.", true);
       }
     }
- 
+
     async function deleteDeck(deckId) {
       if (!confirm("¿Borrar este mazo y sus cartas?")) return;
       const cards = await getCardsByDeck(deckId);
@@ -1145,31 +942,31 @@ Index · HTML
       await loadDecks();
       renderHome();
     }
- 
+
     async function deleteCard(cardId) {
       if (!confirm("¿Borrar esta carta del mazo?")) return;
       await deleteRecord("cards", cardId);
       await openDeck(state.currentDeck.id);
     }
- 
+
     // ---------- Image viewer ----------
- 
+
     function openImageViewer(src) {
       $("viewerImage").src = src;
       $("imageViewer").showModal();
     }
- 
+
     function closeImageViewer() {
       $("imageViewer").close();
       $("viewerImage").src = "";
     }
- 
+
     $("imageViewer").addEventListener("click", (e) => {
       if (e.target.id === "imageViewer" || e.target.id === "viewerImage") closeImageViewer();
     });
- 
+
     // ---------- Scryfall ----------
- 
+
     async function fetchJson(url) {
       const res = await fetch(url);
       const data = await res.json().catch(() => null);
@@ -1179,44 +976,44 @@ Index · HTML
       }
       return data;
     }
- 
+
     async function fetchCardByName(name) {
       return fetchJson(`${SCRYFALL}/cards/named?fuzzy=${encodeURIComponent(name)}`);
     }
- 
+
     function parseCardCode(raw) {
       let value = String(raw || "")
         .trim().toLowerCase().normalize("NFKC")
         .replace(/[–—−]/g, "-").replace(/[·•]/g, " ").replace(/\s+/g, " ")
         .replace(/^#\s*/, "");
- 
+
       if (!value) return null;
- 
+
       value = value.replace(/([a-z]?-?\d+[a-z0-9★*]*)\s*\/\s*\d+[a-z0-9]*/gi, "$1");
       value = value.replace(/[^a-z0-9★*#/\-\s]/g, " ").replace(/\s+/g, " ").trim();
- 
+
       const collectorPattern = "([a-z]?-?\\d+[a-z0-9★*]*)";
- 
+
       let match = value.match(new RegExp(`^([a-z0-9]{2,6})\\s*[-# ]+\\s*${collectorPattern}$`, "i"));
       if (match) return normalizeParsedCode(match[1], match[2]);
- 
+
       match = value.match(new RegExp(`^#?\\s*${collectorPattern}\\s*[-# ]+\\s*([a-z0-9]{2,6})$`, "i"));
       if (match) return normalizeParsedCode(match[2], match[1]);
- 
+
       match = value.match(/^([a-z]{2,5})(\d+[a-z0-9★*]*)$/i);
       if (match) return normalizeParsedCode(match[1], match[2]);
- 
+
       return null;
     }
- 
+
     function normalizeParsedCode(setCode, number) {
       return { setCode: String(setCode || "").toLowerCase().trim(), number: normalizeCollectorNumber(number) };
     }
- 
+
     function normalizeCollectorNumber(number) {
       return String(number || "").toLowerCase().trim().replace(/^#/, "").replace(/\*/g, "★");
     }
- 
+
     function getCollectorNumberCandidates(number) {
       const n = normalizeCollectorNumber(number);
       const candidates = new Set();
@@ -1226,19 +1023,19 @@ Index · HTML
       candidates.add(n.replace(/^0+(\d+[a-z])$/, "$1"));
       return [...candidates].filter(Boolean);
     }
- 
+
     async function fetchCardByCode(raw) {
       const parsed = parseCardCode(raw);
       if (!parsed) throw new Error("Formato inválido. Probá: war 014, 014 war, war014 o war 014/264");
- 
+
       const numbers = getCollectorNumberCandidates(parsed.number);
- 
+
       for (const number of numbers) {
         try {
           return await fetchJson(`${SCRYFALL}/cards/${encodeURIComponent(parsed.setCode)}/${encodeURIComponent(number)}`);
         } catch {}
       }
- 
+
       for (const number of numbers) {
         try {
           const query = `set:${parsed.setCode} cn:${number}`;
@@ -1246,23 +1043,23 @@ Index · HTML
           if (data.data && data.data.length) return data.data[0];
         } catch {}
       }
- 
+
       throw new Error(`No encontré el código ${parsed.setCode.toUpperCase()} ${parsed.number}.`);
     }
- 
+
     async function showAutocomplete(value, container, onPick) {
       const query = value.trim().toLowerCase();
       if (query.length < 2) return hideSuggestions(container);
- 
+
       const localMatches = searchLocalCardNames(query, 12);
       if (localMatches.length) { renderSuggestions(localMatches, container, onPick); return; }
- 
+
       try {
         const data = await fetchJson(`${SCRYFALL}/cards/autocomplete?q=${encodeURIComponent(query)}`);
         renderSuggestions((data.data || []).slice(0, 10), container, onPick);
       } catch { hideSuggestions(container); }
     }
- 
+
     function renderSuggestions(names, container, onPick) {
       if (!names.length) return hideSuggestions(container);
       container.innerHTML = "";
@@ -1275,7 +1072,7 @@ Index · HTML
       }
       container.style.display = "block";
     }
- 
+
     function searchLocalCardNames(query, limit = 10) {
       if (!state.cachedNames.length) return [];
       const startsWith = [], includes = [];
@@ -1287,7 +1084,7 @@ Index · HTML
       }
       return startsWith.concat(includes).slice(0, limit);
     }
- 
+
     async function loadCardNameCache() {
       const saved = localStorage.getItem("mtg-card-name-cache-v1");
       if (saved) {
@@ -1301,7 +1098,7 @@ Index · HTML
       const expired = !state.cachedNamesAt || Date.now() - state.cachedNamesAt > ONE_WEEK;
       if (expired && navigator.onLine) refreshCardNameCache().catch(() => {});
     }
- 
+
     async function refreshCardNameCache() {
       const bulkInfo = await fetchJson(`${SCRYFALL}/bulk-data/oracle-cards`);
       const cards = await fetchJson(bulkInfo.download_uri);
@@ -1310,7 +1107,7 @@ Index · HTML
       state.cachedNamesAt = Date.now();
       localStorage.setItem("mtg-card-name-cache-v1", JSON.stringify({ updatedAt: state.cachedNamesAt, names: uniqueNames }));
     }
- 
+
     async function previewCodeSearch(value) {
       const box = $("codePreview");
       state.selectedCodeCard = null;
@@ -1327,21 +1124,21 @@ Index · HTML
         box.style.display = "block";
       }
     }
- 
+
     function getImageUrl(card) {
       if (card.image_uris?.normal) return card.image_uris.normal;
       if (card.card_faces?.[0]?.image_uris?.normal) return card.card_faces[0].image_uris.normal;
       return null;
     }
- 
+
     async function downloadImageBlob(url) {
       const res = await fetch(url);
       if (!res.ok) throw new Error("No pude descargar la imagen.");
       return res.blob();
     }
- 
+
     // ---------- IndexedDB ----------
- 
+
     function openDB() {
       return new Promise((resolve, reject) => {
         const request = indexedDB.open("mtg-deck-image-app", 1);
@@ -1357,92 +1154,92 @@ Index · HTML
         request.onerror = () => reject(request.error);
       });
     }
- 
+
     function store(name, mode = "readonly") {
       return state.db.transaction(name, mode).objectStore(name);
     }
- 
+
     function reqToPromise(req) {
       return new Promise((resolve, reject) => {
         req.onsuccess = () => resolve(req.result);
         req.onerror = () => reject(req.error);
       });
     }
- 
+
     async function putRecord(storeName, record) { return reqToPromise(store(storeName, "readwrite").put(record)); }
     async function deleteRecord(storeName, id) { return reqToPromise(store(storeName, "readwrite").delete(id)); }
     async function getAllRecords(storeName) { return reqToPromise(store(storeName).getAll()); }
- 
+
     async function getCardsByDeck(deckId) {
       const index = store("cards").index("deckId");
       const cards = await reqToPromise(index.getAll(deckId));
       return cards.sort((a, b) => a.name.localeCompare(b.name, "en", { sensitivity: "base", numeric: true }));
     }
- 
+
     async function loadDecks() {
       state.decks = (await getAllRecords("decks")).sort((a, b) => a.createdAt - b.createdAt);
     }
- 
+
     // ---------- Android back button ----------
- 
+
     function setupBackButtonHandler() {
       history.replaceState({ screen: "home" }, "", location.href);
       history.pushState({ screen: "home-guard" }, "", location.href);
       window.addEventListener("popstate", handleBackButton);
     }
- 
+
     function handleBackButton() {
       if ($("imageViewer")?.open) { closeImageViewer(); pushHomeGuard(); return; }
       if ($("deckDialog")?.open) { closeDeckDialog(); pushHomeGuard(); return; }
       if ($("cardDialog")?.open) { closeCardDialog(); pushHomeGuard(); return; }
- 
+
       if (state.currentDeck) { disarmExit(); renderHome(); return; }
- 
+
       if (state.exitArmed) {
         window.removeEventListener("popstate", handleBackButton);
         history.back();
         return;
       }
- 
+
       showBackToast();
       state.exitArmed = true;
       clearTimeout(state.exitTimer);
       state.exitTimer = setTimeout(() => { disarmExit(); }, 2200);
       pushHomeGuard();
     }
- 
+
     function pushHomeGuard() { history.pushState({ screen: "home-guard" }, "", location.href); }
- 
+
     function showBackToast() { $("backToast")?.classList.add("show"); }
     function hideBackToast() { $("backToast")?.classList.remove("show"); }
- 
+
     function disarmExit() {
       state.exitArmed = false;
       clearTimeout(state.exitTimer);
       hideBackToast();
     }
- 
+
     // ---------- Helpers ----------
- 
+
     function debounce(fn, wait) {
       let timeout;
       return (...args) => { clearTimeout(timeout); timeout = setTimeout(() => fn(...args), wait); };
     }
- 
+
     function hideSuggestions(container) { container.innerHTML = ""; container.style.display = "none"; }
- 
+
     function setStatus(element, text, isError = false) {
       element.textContent = text;
       element.className = isError ? "status error" : "status";
     }
- 
+
     function escapeHtml(value) {
       return String(value).replace(/[&<>'"]/g, char => ({
         "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", "\"": "&quot;"
       }[char]));
     }
   </script>
- 
+
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", async () => {
@@ -1454,13 +1251,3 @@ Index · HTML
   </script>
 </body>
 </html>
- 
-
-
-
-
-
-
-
-
-
