@@ -501,6 +501,22 @@
       background: var(--surface2);
     }
 
+    .small-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: var(--surface2);
+      color: var(--gold);
+      font-size: 18px;
+      border: 1px solid var(--border);
+      flex: 0 0 auto;
+    }
+    
+    .small-btn:hover {
+      background: var(--border);
+      color: var(--gold-light);
+    }
+
     .suggestion {
       padding: 9px 12px;
       border-bottom: 1px solid var(--border);
@@ -664,10 +680,13 @@
     document.addEventListener("DOMContentLoaded", init);
 
     async function init() {
+      await requestPersistentStorage();
+    
       state.db = await openDB();
       await loadDecks();
       await loadCardNameCache();
       bindEvents();
+      bindBackupEvents();
       renderHome();
       setupBackButtonHandler();
     }
@@ -1218,7 +1237,181 @@
       clearTimeout(state.exitTimer);
       hideBackToast();
     }
+    // ---------- Storage persistence ----------
 
+async function requestPersistentStorage() {
+  if (!navigator.storage?.persist) {
+    console.warn("Storage persist no disponible en este navegador.");
+    return false;
+  }
+
+  try {
+    const alreadyPersisted = await navigator.storage.persisted?.();
+
+    if (alreadyPersisted) {
+      console.log("Storage ya es persistente.");
+      return true;
+    }
+
+    const granted = await navigator.storage.persist();
+    console.log("Persistent storage granted:", granted);
+
+    if (!granted) {
+      console.warn("El navegador no concedió almacenamiento persistente.");
+    }
+
+    return granted;
+  } catch (err) {
+    console.warn("No pude pedir storage persistente:", err);
+    return false;
+  }
+}
+
+async function showStorageEstimate() {
+  if (!navigator.storage?.estimate) return;
+
+  const estimate = await navigator.storage.estimate();
+  const usedMB = ((estimate.usage || 0) / 1024 / 1024).toFixed(1);
+  const quotaMB = ((estimate.quota || 0) / 1024 / 1024).toFixed(1);
+
+  console.log(`Storage usado: ${usedMB} MB / ${quotaMB} MB`);
+}
+    // ---------- Backup / Restore ----------
+
+function bindBackupEvents() {
+  $("exportBtn").addEventListener("click", exportBackup);
+  $("importBtn").addEventListener("click", () => $("importFile").click());
+
+  $("importFile").addEventListener("change", async (e) => {
+    await importBackupFile(e);
+  });
+}
+
+async function exportBackup() {
+  try {
+    const decks = await getAllRecords("decks");
+    const cards = await getAllRecords("cards");
+
+    const exportDecks = [];
+    for (const deck of decks) {
+      exportDecks.push({
+        ...deck,
+        commanderImageBlob: await blobToDataURL(deck.commanderImageBlob)
+      });
+    }
+
+    const exportCards = [];
+    for (const card of cards) {
+      exportCards.push({
+        ...card,
+        imageBlob: await blobToDataURL(card.imageBlob)
+      });
+    }
+
+    const backup = {
+      app: "mtg-deck-image-app",
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      decks: exportDecks,
+      cards: exportCards
+    };
+
+    const json = JSON.stringify(backup);
+    const blob = new Blob([json], { type: "application/json" });
+
+    const date = new Date().toISOString().slice(0, 10);
+    const filename = `mtg-decks-backup-${date}.json`;
+
+    downloadBlob(blob, filename);
+
+    alert("Backup exportado correctamente.");
+  } catch (err) {
+    console.error(err);
+    alert("No pude exportar el backup.");
+  }
+}
+
+async function importBackupFile(e) {
+  const file = e.target.files?.[0];
+  e.target.value = "";
+
+  if (!file) return;
+
+  try {
+    const text = await file.text();
+    const backup = JSON.parse(text);
+
+    if (backup.app !== "mtg-deck-image-app") {
+      alert("Este archivo no parece ser un backup válido de MTG Decks.");
+      return;
+    }
+
+    if (!confirm("Esto va a REEMPLAZAR tus mazos actuales por los del backup. ¿Continuar?")) {
+      return;
+    }
+
+    const currentCards = await getAllRecords("cards");
+    for (const card of currentCards) {
+      await deleteRecord("cards", card.id);
+    }
+
+    const currentDecks = await getAllRecords("decks");
+    for (const deck of currentDecks) {
+      await deleteRecord("decks", deck.id);
+    }
+
+    for (const deck of backup.decks || []) {
+      await putRecord("decks", {
+        ...deck,
+        commanderImageBlob: await dataURLToBlob(deck.commanderImageBlob)
+      });
+    }
+
+    for (const card of backup.cards || []) {
+      await putRecord("cards", {
+        ...card,
+        imageBlob: await dataURLToBlob(card.imageBlob)
+      });
+    }
+
+    await loadDecks();
+    renderHome();
+
+    alert("Backup importado correctamente.");
+  } catch (err) {
+    console.error(err);
+    alert("No pude importar el backup. Archivo inválido o corrupto.");
+  }
+}
+
+function blobToDataURL(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error);
+
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function dataURLToBlob(dataURL) {
+  const res = await fetch(dataURL);
+  return res.blob();
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+
+  a.remove();
+  URL.revokeObjectURL(url);
+}
     // ---------- Helpers ----------
 
     function debounce(fn, wait) {
@@ -1247,7 +1440,7 @@
         reg.update();
       });
     }
-    if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
+    
   </script>
 </body>
 </html>
